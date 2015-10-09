@@ -108,6 +108,7 @@ def dispatch_values(values, host, plugin, plugin_instance, metric_type,
     if type_instance:
         metric.type_instance = type_instance
     metric.values = values
+    metric.meta = {'0': True}
     metric.dispatch()
 
 
@@ -206,6 +207,7 @@ def read(input_data=None):
     for node in get_info("%s/nodes" % (base_url)):
         dispatch_node_metrics(node)
 
+    # Bail out after collecting node stats
     # TODO Make this a configuration option
     return
 
