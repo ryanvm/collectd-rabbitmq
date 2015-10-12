@@ -6,6 +6,7 @@ import urllib2
 import urllib
 import json
 import re
+import socket
 
 RABBIT_API_URL = "http://{host}:{port}/api/"
 
@@ -82,6 +83,26 @@ def get_info(url):
     return json.load(info)
 
 
+def get_vhost_name(vhost):
+    '''
+    returns the vhost name or the fully qualified domain name if
+    this is the default vhost ("/").
+    '''
+
+    # is this NOT the default vhost?
+    if 'name' in vhost and vhost['name'] != '/':
+        return vhost['name']
+
+    # otherwise we're talking about the default. in which case '/'
+    # is not going to cut it as a hostname
+    fqdn = socket.getfqdn()
+    if fqdn is not None and fqdn != '':
+        return fqdn
+
+    # they've screwed up their hostname. just give them something boring
+    return 'default'
+
+
 def dispatch_values(values, host, plugin, plugin_instance, metric_type,
                     type_instance=None):
     '''
@@ -130,7 +151,8 @@ def dispatch_queue_metrics(queue, vhost):
     Dispatches queue metrics for queue in vhost
     '''
 
-    vhost_name = 'rabbitmq_%s' % (vhost['name'].replace('/', 'default'))
+    vhost_name = get_vhost_name(vhost)
+
     for name in QUEUE_STATS:
         values = list((queue.get(name, 0),))
         dispatch_values(values, vhost_name, 'queues', queue['name'],
@@ -158,7 +180,7 @@ def dispatch_exchange_metrics(exchange, vhost):
     '''
     Dispatches exchange metrics for exchange in vhost
     '''
-    vhost_name = 'rabbitmq_%s' % vhost['name'].replace('/', 'default')
+    vhost_name = get_vhost_name(vhost)
     dispatch_message_stats(exchange.get('message_stats', None), vhost_name,
                            'exchanges', exchange['name'])
 
